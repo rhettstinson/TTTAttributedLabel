@@ -883,11 +883,26 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 CTLineDraw(truncatedLine, c);
                 
                 NSRange linkRange;
-                if ([attributedTruncationString attribute:NSLinkAttributeName atIndex:0 effectiveRange:&linkRange]) {
+                NSURL *truncationLinkURL = [attributedTruncationString attribute:NSLinkAttributeName
+                                                                         atIndex:0
+                                                                  effectiveRange:&linkRange];
+                
+                if (truncationLinkURL) {
                     NSRange tokenRange = [truncationString.string rangeOfString:attributedTruncationString.string];
-                    NSRange tokenLinkRange = NSMakeRange((NSUInteger)(lastLineRange.location+lastLineRange.length)-tokenRange.length, (NSUInteger)tokenRange.length);
                     
-                    [self addLinkToURL:[attributedTruncationString attribute:NSLinkAttributeName atIndex:0 effectiveRange:&linkRange] withRange:tokenLinkRange];
+                    CFArrayRef runs = CTLineGetGlyphRuns(truncatedLine);
+                    CTRunRef run = CFArrayGetValueAtIndex(runs, 0);
+                    
+                    CFRange runRange = CTRunGetStringRange(run);
+                    NSInteger location = lastLineRange.location;
+                    if (tokenRange.location != runRange.location || tokenRange.length != runRange.length)
+                    {
+                        location += runRange.length;
+                    }
+                    NSRange tokenLinkRange = NSMakeRange(location, (NSUInteger)tokenRange.length);
+                    
+                    
+                    [self addLinkToURL:truncationLinkURL withRange:tokenLinkRange];
                 }
 
                 CFRelease(truncatedLine);
